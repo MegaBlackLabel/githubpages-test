@@ -29,20 +29,27 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: コードをチェックアウトする
-        uses: actions/checkout@v3.3.0
-      - uses: pnpm/action-setup@v2
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v3
         with:
-          version: 7.27.1 # 明示的に指定して Renovate と package.json 内の "engine" で管理するのがいいと思います
-      - name: Node.js のセットアップを行う
-        uses: actions/setup-node@v3
+          node-version: "lts/*"
+      # corepack を有効化
+      - run: corepack enable pnpm
+
+      # pnpm のキャッシュディレクトリを取得
+      - id: pnpm
+        run: echo "cache-dir=$(pnpm store path)" >> $GITHUB_OUTPUT
+      # キャッシュをリストア
+      - uses: actions/cache@v3
         with:
-          node-version-file: '.node-version'
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-      - name: Node のパッケージをインストールする
-        run: |
-          pnpm install --frozen-lockfile
+          path: ${{ steps.pnpm.outputs.cache-dir }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - run: pnpm install --frozen-lockfile
       - name: Setup Pages
         uses: actions/configure-pages@v4
         with:
